@@ -5,13 +5,13 @@ Librería para crawlear tweets y respuestas de Twitter/X con autenticación.
 ## Instalación
 
 ```bash
-npm install twitter-crawler
+npm install @cachis/x-crawler
 ```
 
 O con yarn:
 
 ```bash
-yarn add twitter-crawler
+yarn add @cachis/x-crawler
 ```
 
 **Nota:** Esta librería requiere Playwright como dependencia peer. Asegúrate de instalarlo:
@@ -25,7 +25,7 @@ npm install playwright
 ### Inicialización
 
 ```typescript
-import { TwitterCrawler } from 'twitter-crawler';
+import { TwitterCrawler } from '@cachis/x-crawler';
 
 // Inicializar con token de autenticación (requerido)
 const crawler = TwitterCrawler.init({
@@ -104,7 +104,7 @@ crawler.setConfigType('conservative');
 ## Tipos
 
 ```typescript
-import { TweetHash, TweetAnswer, CrawlRepliesResult } from 'twitter-crawler';
+import { TweetHash, TweetAnswer, CrawlRepliesResult } from '@cachis/x-crawler';
 ```
 
 ## Notas
