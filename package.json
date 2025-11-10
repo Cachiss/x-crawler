@@ -1,0 +1,44 @@
+{
+  "name": "twitter-crawler",
+  "version": "1.0.0",
+  "description": "Librería para crawlear tweets y respuestas de Twitter/X",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "twitter",
+    "crawler",
+    "scraper",
+    "x.com",
+    "tweets",
+    "twitter-api",
+    "web-scraping",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.41.1",
+    "chalk": "^4.1.2",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "playwright": "^1.54.1"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ]
+}
+
