@@ -1,5 +1,5 @@
 {
-  "name": "twitter-crawler",
+  "name": "x-crawler",
   "version": "1.0.0",
   "description": "Librería para crawlear tweets y respuestas de Twitter/X",
   "main": "dist/index.js",
@@ -18,7 +18,11 @@
     "web-scraping",
     "automation"
   ],
-  "author": "",
+  "author": "Marcos Camacho <marcoscachis@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cachiss/x-crawler"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
