@@ -172,16 +172,43 @@ export class RepliesCrawler {
             const createdAt = timeElement?.getAttribute('datetime') || '';
 
             const replyButton = article.querySelector('[data-testid="reply"]');
-            const replyCount = replyButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+            const replyAriaLabel = replyButton?.getAttribute('aria-label') || '';
+            const replyCount = replyAriaLabel.match(/\d+/)?.[0] || '0';
 
             const retweetButton = article.querySelector('[data-testid="retweet"]');
-            const retweetCount = retweetButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+            const retweetAriaLabel = retweetButton?.getAttribute('aria-label') || '';
+            const retweetCount = retweetAriaLabel.match(/\d+/)?.[0] || '0';
 
             const likeButton = article.querySelector('[data-testid="like"]');
-            const favoriteCount = likeButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+            const likeAriaLabel = likeButton?.getAttribute('aria-label') || '';
+            const favoriteCount = likeAriaLabel.match(/\d+/)?.[0] || '0';
 
             const viewsElement = article.querySelector('[href*="/analytics"]');
-            const views = viewsElement?.getAttribute('aria-label')?.match(/[\d,]+/)?.[0]?.replace(/,/g, '') || '0';
+            const viewsAriaLabel = viewsElement?.getAttribute('aria-label') || '';
+            const views = viewsAriaLabel.match(/[\d,]+/)?.[0]?.replace(/,/g, '') || '0';
+
+            // DEBUG: Log complete extraction info
+            console.log('=== DEBUG: Tweet Extraction ===');
+            console.log('Tweet ID:', idStr);
+            console.log('Username:', username);
+            console.log('Full Text:', fullText);
+            console.log('---');
+            console.log('Reply Button aria-label:', replyAriaLabel);
+            console.log('Extracted reply_count:', replyCount);
+            console.log('---');
+            console.log('Retweet Button aria-label:', retweetAriaLabel);
+            console.log('Extracted retweet_count:', retweetCount);
+            console.log('---');
+            console.log('Like Button aria-label:', likeAriaLabel);
+            console.log('Extracted favorite_count:', favoriteCount);
+            console.log('---');
+            console.log('Views Element found:', !!viewsElement);
+            console.log('Views Element href:', viewsElement?.getAttribute('href'));
+            console.log('Views Element aria-label:', viewsAriaLabel);
+            console.log('Extracted views:', views);
+            console.log('---');
+            console.log('Views Element outerHTML:', viewsElement?.outerHTML || 'Not found');
+            console.log('=== END DEBUG ===');
 
             const avatarImg = article.querySelector('img[alt*="' + username + '"]');
             const photoUser = avatarImg?.getAttribute('src') || '';
@@ -667,6 +694,67 @@ export class RepliesCrawler {
       this.log('Authentication token injected');
 
       this.log('Navigating to tweet...');
+
+      // Set up response listener before navigation
+      let tweet: TweetHash | null = null;
+      const responsePromise = page.waitForResponse(
+        (response) => {
+          const url = response.url();
+          return url.includes("TweetDetail") || url.includes("TweetResultByRestId");
+        }
+      ).then(async (response) => {
+        try {
+          const responseText = await response.text();
+          const responseJson = JSON.parse(responseText);
+
+          // Extract tweet from API response
+          const tweetData = responseJson.data?.tweetResult?.result ||
+                           responseJson.data?.threaded_conversation_with_injections_v2?.instructions?.[0]?.entries?.[0]?.content?.itemContent?.tweet_results?.result;
+
+          if (tweetData) {
+            const tweetContent = tweetData.legacy || tweetData.tweet?.legacy;
+            const userContent = tweetData.core?.user_results?.result?.legacy || tweetData.tweet?.core?.user_results?.result?.legacy;
+            const userData = tweetData.core?.user_results?.result || tweetData.tweet?.core?.user_results?.result;
+
+            if (tweetContent && userContent && userData) {
+              const username = userData.core?.screen_name || userContent.screen_name;
+              const cleanUsername = username?.startsWith('@') ? username.substring(1) : username;
+
+              const avatarUrl = userData.avatar?.image_url ||
+                               userContent.profile_image_url_https ||
+                               tweetData.core?.user_results?.result?.avatar?.image_url;
+
+              const views = (tweetData.views?.count || tweetData.tweet?.views?.count || "0").toString();
+
+              return {
+                username: username || '',
+                full_text: tweetContent.full_text || '',
+                tweet_url: `https://x.com/${cleanUsername}/status/${tweetContent.id_str}`,
+                created_at: tweetContent.created_at || '',
+                id_str: tweetContent.id_str || '',
+                reply_count: tweetContent.reply_count || 0,
+                retweet_count: tweetContent.retweet_count || 0,
+                favorite_count: tweetContent.favorite_count || 0,
+                views: views,
+                photo_user: avatarUrl || '',
+                image_url: tweetContent.entities?.media?.[0]?.media_url_https || '',
+                in_reply_to_screen_name: tweetContent.in_reply_to_screen_name || '',
+                quote_count: tweetContent.quote_count || 0,
+                lang: tweetContent.lang || 'es',
+                user_id_str: tweetContent.user_id_str || '',
+                conversation_id_str: tweetContent.conversation_id_str || tweetContent.id_str,
+                location: userContent.location || '',
+                has_quoted_text: false
+              };
+            }
+          }
+        } catch (error) {
+          this.log('Error parsing API response');
+        }
+        return null;
+      }).catch(() => null);
+
+      // Navigate to tweet
       await page.goto(tweetUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 60000
@@ -694,7 +782,25 @@ export class RepliesCrawler {
 
       this.log('Tweet page loaded successfully');
 
-      const tweet = await this.extractTweetFromPage(page, tweetUrl);
+      // Wait for API response with timeout
+      try {
+        tweet = await Promise.race([
+          responsePromise,
+          page.waitForTimeout(8000).then(() => null)
+        ]);
+
+        if (tweet) {
+          this.log('Tweet metrics extracted successfully from API');
+        }
+      } catch (error) {
+        this.log('Timeout waiting for API response, will use DOM extraction');
+      }
+
+      // Fallback to DOM extraction if API extraction failed
+      if (!tweet) {
+        this.log('Extracting tweet metrics from DOM as fallback');
+        tweet = await this.extractTweetFromPage(page, tweetUrl);
+      }
 
       if (tweet) {
         this.log('Tweet metrics extracted successfully');

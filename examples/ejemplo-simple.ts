@@ -7,7 +7,7 @@ import { TwitterCrawler } from '../src/index';
 async function simpleExample() {
   // 1. Initialize the crawler (required)
   const crawler = TwitterCrawler.init({
-    authToken: 'YOUR_TOKEN_HERE' // Replace with your real token
+    authToken: '' // Replace with your real token
   });
   
   // 2. Crawl tweets by keywords
