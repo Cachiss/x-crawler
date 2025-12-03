@@ -1,6 +1,6 @@
 {
   "name": "@cachis/x-crawler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Librería para crawlear tweets y respuestas de Twitter/X",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
