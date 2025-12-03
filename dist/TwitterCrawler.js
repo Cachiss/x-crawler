@@ -72,6 +72,15 @@ class TwitterCrawler {
         this.configType = configType;
         this.config = (0, CrawlConfig_1.getCrawlConfig)(configType);
     }
+    /**
+     * Gets metrics from a specific tweet by URL
+     * @param options GetTweetMetrics options
+     * @returns Tweet with all its metrics or null if not found
+     */
+    async getTweetMetrics(options) {
+        const repliesCrawler = new RepliesCrawler_1.RepliesCrawler(this.authToken, options.onLog);
+        return repliesCrawler.getTweetMetrics(options);
+    }
 }
 exports.TwitterCrawler = TwitterCrawler;
 //# sourceMappingURL=TwitterCrawler.js.map

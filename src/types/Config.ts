@@ -36,6 +36,11 @@ export interface CrawlMultipleRepliesOptions {
   onLog?: (message: string) => void;
 }
 
+export interface GetTweetMetricsOptions {
+  tweetUrl: string;
+  onLog?: (message: string) => void;
+}
+
 export interface TwitterCrawlerInitOptions {
   authToken: string;
   configType?: ConfigType;

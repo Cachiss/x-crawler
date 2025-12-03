@@ -1,4 +1,4 @@
-import { TwitterCrawlerInitOptions, CrawlTweetsOptions, CrawlRepliesOptions, CrawlMultipleRepliesOptions } from "./types/Config";
+import { TwitterCrawlerInitOptions, CrawlTweetsOptions, CrawlRepliesOptions, CrawlMultipleRepliesOptions, GetTweetMetricsOptions } from "./types/Config";
 import { TweetHash, TweetAnswer, CrawlRepliesResult } from "./types/Tweet";
 export declare class TwitterCrawler {
     private authToken;
@@ -38,5 +38,11 @@ export declare class TwitterCrawler {
      * Updates the crawler configuration
      */
     setConfigType(configType: 'default' | 'aggressive' | 'conservative'): void;
+    /**
+     * Gets metrics from a specific tweet by URL
+     * @param options GetTweetMetrics options
+     * @returns Tweet with all its metrics or null if not found
+     */
+    getTweetMetrics(options: GetTweetMetricsOptions): Promise<TweetHash | null>;
 }
 //# sourceMappingURL=TwitterCrawler.d.ts.map

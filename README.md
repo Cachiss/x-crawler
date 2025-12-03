@@ -83,6 +83,27 @@ const results = await crawler.crawlMultipleReplies({
 });
 ```
 
+### Obtener Métricas de un Tweet
+
+```typescript
+// Obtener métricas de un tweet específico
+const metrics = await crawler.getTweetMetrics({
+  tweetUrl: 'https://x.com/lopezdoriga/status/1995893221839245382',
+  onLog: (message) => console.log(message)
+});
+
+if (metrics) {
+  console.log(`ID: ${metrics.id_str}`);
+  console.log(`Username: @${metrics.username}`);
+  console.log(`Text: ${metrics.full_text}`);
+  console.log(`Views: ${metrics.views}`);
+  console.log(`Replies: ${metrics.reply_count}`);
+  console.log(`Retweets: ${metrics.retweet_count}`);
+  console.log(`Quotes: ${metrics.quote_count}`);
+  console.log(`Likes: ${metrics.favorite_count}`);
+}
+```
+
 ## Configuración
 
 La librería soporta tres tipos de configuración:

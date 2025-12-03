@@ -1,5 +1,5 @@
-import { CrawlRepliesOptions, CrawlMultipleRepliesOptions } from "../types/Config";
-import { TweetAnswer, CrawlRepliesResult } from "../types/Tweet";
+import { CrawlRepliesOptions, CrawlMultipleRepliesOptions, GetTweetMetricsOptions } from "../types/Config";
+import { TweetHash, TweetAnswer, CrawlRepliesResult } from "../types/Tweet";
 export declare class RepliesCrawler {
     private authToken;
     private onLog?;
@@ -7,7 +7,9 @@ export declare class RepliesCrawler {
     private log;
     private clickShowSpamButton;
     private extractRepliesFromPage;
+    private extractTweetFromPage;
     crawlReplies(options: CrawlRepliesOptions): Promise<TweetAnswer[]>;
     crawlMultipleReplies(options: CrawlMultipleRepliesOptions): Promise<CrawlRepliesResult[]>;
+    getTweetMetrics(options: GetTweetMetricsOptions): Promise<TweetHash | null>;
 }
 //# sourceMappingURL=RepliesCrawler.d.ts.map

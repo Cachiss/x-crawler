@@ -120,6 +120,71 @@ class RepliesCrawler {
         }, parentTweetUrl);
         return replies;
     }
+    async extractTweetFromPage(page, tweetUrl) {
+        const tweet = await page.evaluate((url) => {
+            const parentIdMatch = url.match(/status\/(\d+)/);
+            const parentTweetId = parentIdMatch ? parentIdMatch[1] : '';
+            const articles = document.querySelectorAll('article[data-testid="tweet"]');
+            for (const article of Array.from(articles)) {
+                try {
+                    const tweetTextElement = article.querySelector('[data-testid="tweetText"]');
+                    const fullText = tweetTextElement?.textContent || '';
+                    const userLink = article.querySelector('a[role="link"][href*="/"]');
+                    const username = userLink?.getAttribute('href')?.replace('/', '') || '';
+                    const timeElement = article.querySelector('time');
+                    const tweetLink = timeElement?.parentElement;
+                    const tweetUrl = tweetLink?.href || '';
+                    const idMatch = tweetUrl.match(/status\/(\d+)/);
+                    const idStr = idMatch ? idMatch[1] : '';
+                    // Only return the parent tweet
+                    if (idStr === parentTweetId) {
+                        const createdAt = timeElement?.getAttribute('datetime') || '';
+                        const replyButton = article.querySelector('[data-testid="reply"]');
+                        const replyCount = replyButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+                        const retweetButton = article.querySelector('[data-testid="retweet"]');
+                        const retweetCount = retweetButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+                        const likeButton = article.querySelector('[data-testid="like"]');
+                        const favoriteCount = likeButton?.getAttribute('aria-label')?.match(/\d+/)?.[0] || '0';
+                        const viewsElement = article.querySelector('[href*="/analytics"]');
+                        const views = viewsElement?.getAttribute('aria-label')?.match(/[\d,]+/)?.[0]?.replace(/,/g, '') || '0';
+                        const avatarImg = article.querySelector('img[alt*="' + username + '"]');
+                        const photoUser = avatarImg?.getAttribute('src') || '';
+                        const tweetImage = article.querySelector('[data-testid="tweetPhoto"] img');
+                        const imageUrl = tweetImage?.getAttribute('src') || '';
+                        const replyingToElement = article.querySelector('[data-testid="tweetText"]')?.closest('div')?.previousElementSibling;
+                        const inReplyToScreenName = replyingToElement?.textContent?.includes('Replying to')
+                            ? replyingToElement?.querySelector('a')?.textContent?.replace('@', '') || ''
+                            : '';
+                        return {
+                            username,
+                            full_text: fullText,
+                            tweet_url: tweetUrl,
+                            created_at: createdAt,
+                            id_str: idStr,
+                            reply_count: parseInt(replyCount) || 0,
+                            retweet_count: parseInt(retweetCount) || 0,
+                            favorite_count: parseInt(favoriteCount) || 0,
+                            views: views,
+                            photo_user: photoUser,
+                            image_url: imageUrl,
+                            in_reply_to_screen_name: inReplyToScreenName,
+                            quote_count: 0,
+                            lang: 'es',
+                            user_id_str: '',
+                            conversation_id_str: idStr,
+                            location: '',
+                            has_quoted_text: false
+                        };
+                    }
+                }
+                catch (error) {
+                    console.error('Error extracting tweet:', error);
+                }
+            }
+            return null;
+        }, tweetUrl);
+        return tweet;
+    }
     async crawlReplies(options) {
         const { tweetUrl, idTweet, maxReplies = -1 } = options;
         this.onLog = options.onLog;
@@ -451,6 +516,100 @@ class RepliesCrawler {
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.log(`Error during multiple tweets crawl: ${errorMessage}`);
+            throw error;
+        }
+        finally {
+            await browser.close();
+            this.log('Browser closed');
+        }
+    }
+    async getTweetMetrics(options) {
+        const { tweetUrl } = options;
+        this.onLog = options.onLog;
+        this.log('Starting tweet metrics extraction...');
+        this.log(`Tweet URL: ${tweetUrl}`);
+        const browser = await playwright_extra_1.chromium.launch({
+            headless: process.env.DEBUG !== 'true',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-blink-features=AutomationControlled',
+            ],
+        });
+        const context = await browser.newContext({
+            viewport: { width: 1280, height: 720 },
+            userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        });
+        const page = await context.newPage();
+        try {
+            await page.goto('https://twitter.com', {
+                waitUntil: 'domcontentloaded',
+                timeout: 60000
+            });
+            await page.context().addCookies([
+                {
+                    name: 'auth_token',
+                    value: this.authToken,
+                    domain: '.twitter.com',
+                    path: '/',
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'None',
+                },
+                {
+                    name: 'auth_token',
+                    value: this.authToken,
+                    domain: '.x.com',
+                    path: '/',
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'None',
+                },
+            ]);
+            this.log('Authentication token injected');
+            this.log('Navigating to tweet...');
+            await page.goto(tweetUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 60000
+            });
+            await page.waitForTimeout(3000);
+            let tweetsDetected = false;
+            for (let i = 0; i < 3; i++) {
+                try {
+                    await page.waitForSelector('article[data-testid="tweet"]', { timeout: 10000 });
+                    this.log('Tweet detected on page');
+                    tweetsDetected = true;
+                    break;
+                }
+                catch (error) {
+                    this.log(`Attempt ${i + 1}/3: No tweet detected, waiting...`);
+                    await page.waitForTimeout(1500);
+                    await page.evaluate(() => window.scrollBy(0, 300));
+                    await page.waitForTimeout(1000);
+                }
+            }
+            if (!tweetsDetected) {
+                throw new Error('Could not detect tweet after 3 attempts. Verify URL and token.');
+            }
+            this.log('Tweet page loaded successfully');
+            const tweet = await this.extractTweetFromPage(page, tweetUrl);
+            if (tweet) {
+                this.log('Tweet metrics extracted successfully');
+                this.log(`ID: ${tweet.id_str}`);
+                this.log(`Views: ${tweet.views}`);
+                this.log(`Replies: ${tweet.reply_count}`);
+                this.log(`Retweets: ${tweet.retweet_count}`);
+                this.log(`Likes: ${tweet.favorite_count}`);
+                return tweet;
+            }
+            else {
+                this.log('Could not extract tweet metrics');
+                return null;
+            }
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.log(`Error during tweet metrics extraction: ${errorMessage}`);
             throw error;
         }
         finally {

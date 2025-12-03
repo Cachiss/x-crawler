@@ -9,7 +9,8 @@ import {
   TwitterCrawlerInitOptions,
   CrawlTweetsOptions,
   CrawlRepliesOptions,
-  CrawlMultipleRepliesOptions
+  CrawlMultipleRepliesOptions,
+  GetTweetMetricsOptions
 } from "./types/Config";
 import { TweetHash, TweetAnswer, CrawlRepliesResult } from "./types/Tweet";
 
@@ -101,6 +102,16 @@ export class TwitterCrawler {
   setConfigType(configType: 'default' | 'aggressive' | 'conservative') {
     this.configType = configType;
     this.config = getCrawlConfig(configType);
+  }
+
+  /**
+   * Gets metrics from a specific tweet by URL
+   * @param options GetTweetMetrics options
+   * @returns Tweet with all its metrics or null if not found
+   */
+  async getTweetMetrics(options: GetTweetMetricsOptions): Promise<TweetHash | null> {
+    const repliesCrawler = new RepliesCrawler(this.authToken, options.onLog);
+    return repliesCrawler.getTweetMetrics(options);
   }
 }
 

@@ -33,8 +33,29 @@ async function simpleExample() {
       maxReplies: 5,
       onLog: (message) => console.log(message)
     });
-    
+
     console.log(`\nCollected ${replies.length} replies`);
+  }
+
+  // 4. Get metrics from a specific tweet
+  console.log('\n\nGetting metrics from a specific tweet...');
+  const tweetMetrics = await crawler.getTweetMetrics({
+    tweetUrl: 'https://x.com/lopezdoriga/status/1995893221839245382',
+    onLog: (message) => console.log(message)
+  });
+
+  if (tweetMetrics) {
+    console.log('\nTweet metrics:');
+    console.log(`ID: ${tweetMetrics.id_str}`);
+    console.log(`Username: @${tweetMetrics.username}`);
+    console.log(`Text: ${tweetMetrics.full_text}`);
+    console.log(`Views: ${tweetMetrics.views}`);
+    console.log(`Replies: ${tweetMetrics.reply_count}`);
+    console.log(`Retweets: ${tweetMetrics.retweet_count}`);
+    console.log(`Quotes: ${tweetMetrics.quote_count}`);
+    console.log(`Likes: ${tweetMetrics.favorite_count}`);
+  } else {
+    console.log('Could not extract tweet metrics');
   }
 }
 
